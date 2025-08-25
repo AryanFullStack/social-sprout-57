@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +27,14 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const ComposerPage = () => {
+  const { toast } = useToast();
   const [selectedTone, setSelectedTone] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["facebook"]);
   const [postContent, setPostContent] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [callToAction, setCallToAction] = useState("");
   const [topic, setTopic] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const tones = [
     { value: "professional", label: "Professional", description: "Formal and business-oriented" },
@@ -50,6 +54,56 @@ const ComposerPage = () => {
         ? prev.filter(p => p !== platformId)
         : [...prev, platformId]
     );
+  };
+
+  const generateContentWithAI = async () => {
+    if (!topic || !selectedTone) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a topic and select a tone before generating content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      // Generate content for the first selected platform
+      const platform = selectedPlatforms[0] || 'facebook';
+      
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: {
+          topic,
+          tone: selectedTone,
+          platform
+        }
+      });
+
+      if (error) {
+        console.error('Error generating content:', error);
+        throw new Error(error.message || 'Failed to generate content');
+      }
+
+      if (data) {
+        setPostContent(data.content);
+        setHashtags(data.hashtags);
+        setCallToAction(data.cta);
+        
+        toast({
+          title: "Content Generated!",
+          description: "AI has generated your social media content. You can edit it as needed.",
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate content. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const generatePreview = (platform: string) => {
@@ -175,9 +229,14 @@ const ComposerPage = () => {
                   </Select>
                 </div>
 
-                <Button className="w-full" variant="outline">
+                <Button 
+                  className="w-full" 
+                  variant="outline" 
+                  onClick={generateContentWithAI}
+                  disabled={isGenerating || !topic || !selectedTone}
+                >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Content with AI
+                  {isGenerating ? "Generating..." : "Generate Content with AI"}
                 </Button>
               </CardContent>
             </Card>
