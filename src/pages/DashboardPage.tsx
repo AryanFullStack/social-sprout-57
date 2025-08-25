@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,80 +25,93 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const DashboardPage = () => {
+  const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
+  const [posts, setPosts] = useState([]);
+  const [socialAccounts, setSocialAccounts] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const [postsResponse, accountsResponse, schedulesResponse] = await Promise.all([
+        supabase.from('posts').select('*').order('created_at', { ascending: false }),
+        supabase.from('social_accounts').select('*'),
+        supabase.from('post_schedules').select('*, posts(*)').order('scheduled_for', { ascending: true })
+      ]);
+
+      if (postsResponse.error) throw postsResponse.error;
+      if (accountsResponse.error) throw accountsResponse.error;
+      if (schedulesResponse.error) throw schedulesResponse.error;
+
+      setPosts(postsResponse.data || []);
+      setSocialAccounts(accountsResponse.data || []);
+      setSchedules(schedulesResponse.data || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const kpiData = [
     {
       title: "Scheduled Posts",
-      value: 24,
+      value: schedules.filter(s => s.status === 'scheduled').length,
       change: "+12%",
       trend: "up",
       icon: Calendar,
-      description: "Posts scheduled for this week"
+      description: "Posts scheduled for publishing"
     },
     {
       title: "Published Posts",
-      value: 156,
+      value: posts.filter(p => p.status === 'published').length,
       change: "+8%",
       trend: "up",
       icon: CheckCircle,
-      description: "Successfully published this month"
+      description: "Successfully published posts"
     },
     {
       title: "Failed Posts",
-      value: 3,
+      value: schedules.filter(s => s.status === 'failed').length,
       change: "-50%",
       trend: "down",
       icon: AlertTriangle,
       description: "Failed posts requiring attention"
     },
     {
-      title: "Account Health",
-      value: "98%",
+      title: "Connected Accounts",
+      value: socialAccounts.filter(a => a.is_active).length,
       change: "+2%",
       trend: "up",
       icon: Activity,
-      description: "Overall account connectivity status"
+      description: "Active social media accounts"
     }
   ];
 
-  const recentActivity = [
-    {
-      type: "scheduled",
-      title: "New post scheduled for Facebook",
-      description: "Marketing campaign for Black Friday",
-      time: "2 minutes ago",
-      status: "success"
-    },
-    {
-      type: "published",
-      title: "Instagram post published",
-      description: "Product showcase went live",
-      time: "15 minutes ago",
-      status: "success"
-    },
-    {
-      type: "failed",
-      title: "LinkedIn post failed",
-      description: "Authentication error - needs reconnection",
-      time: "1 hour ago",
-      status: "error"
-    },
-    {
-      type: "scheduled",
-      title: "Bulk posts scheduled",
-      description: "5 posts scheduled for next week",
-      time: "2 hours ago",
-      status: "success"
-    }
-  ];
+  const recentActivity = schedules.slice(0, 4).map((schedule, index) => ({
+    type: schedule.status === 'scheduled' ? 'scheduled' : 
+          schedule.status === 'published' ? 'published' : 'failed',
+    title: `${schedule.platform} post ${schedule.status}`,
+    description: schedule.posts?.title || 'Post content',
+    time: new Date(schedule.scheduled_for).toLocaleDateString(),
+    status: schedule.status === 'failed' ? 'error' : 'success'
+  }));
 
-  const connectedAccounts = [
-    { name: "Facebook Page", status: "connected", posts: 12 },
-    { name: "Instagram Business", status: "connected", posts: 8 },
-    { name: "LinkedIn Company", status: "warning", posts: 4 },
-    { name: "Twitter", status: "disconnected", posts: 0 }
-  ];
+  const connectedAccounts = socialAccounts.map(account => ({
+    name: account.account_name,
+    status: account.is_active ? "connected" : "disconnected",
+    posts: posts.filter(p => p.platforms?.includes(account.platform)).length
+  }));
 
   const quickActions = [
     {
@@ -125,6 +140,19 @@ const DashboardPage = () => {
       action: "/analytics"
     }
   ];
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

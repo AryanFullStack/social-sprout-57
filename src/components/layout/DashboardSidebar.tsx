@@ -55,17 +55,15 @@ const navigationItems = [
     title: "Content",
     items: [
       { title: "Composer", url: "/composer", icon: PenTool },
+      { title: "All Posts", url: "/posts", icon: FileText },
       { title: "Calendar", url: "/calendar", icon: Calendar },
-      { title: "Templates", url: "/templates", icon: FileText, badge: "Soon" },
-      { title: "Queue", url: "/queue", icon: Clock, badge: "3" },
+      { title: "Analytics", url: "/analytics", icon: BarChart3 },
     ]
   },
   {
     title: "Management",
     items: [
       { title: "Accounts", url: "/accounts", icon: Users },
-      { title: "Logs", url: "/logs", icon: Activity, badge: "2" },
-      { title: "Analytics", url: "/analytics", icon: BarChart3, badge: "New" },
     ]
   },
   {
@@ -160,14 +158,6 @@ export function DashboardSidebar() {
                         >
                           <item.icon className="w-4 h-4 flex-shrink-0" />
                           <span className="ml-3 flex-1">{item.title}</span>
-                          {item.badge && (
-                            <Badge 
-                              variant={item.badge === "New" ? "default" : "secondary"} 
-                              className="ml-auto text-xs"
-                            >
-                              {item.badge}
-                            </Badge>
-                          )}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

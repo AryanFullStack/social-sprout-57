@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -24,58 +25,47 @@ import { useToast } from "@/hooks/use-toast";
 const AccountsPage = () => {
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
+  const [socialAccounts, setSocialAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const connectedAccounts = [
-    {
-      id: "facebook-page-1",
-      type: "facebook",
-      name: "Your Business Page",
-      username: "@yourbusiness",
-      followers: 12500,
-      status: "connected",
-      lastSync: "2 minutes ago",
-      postsThisMonth: 18,
-      engagement: 94,
-      avatar: "FB"
-    },
-    {
-      id: "instagram-1", 
-      type: "instagram",
-      name: "Your Instagram Business",
-      username: "@yourbusiness.ig",
-      followers: 8750,
-      status: "connected",
-      lastSync: "5 minutes ago",
-      postsThisMonth: 24,
-      engagement: 87,
-      avatar: "IG"
-    },
-    {
-      id: "linkedin-1",
-      type: "linkedin", 
-      name: "Your Company Page",
-      username: "your-company",
-      followers: 3200,
-      status: "warning",
-      lastSync: "2 hours ago",
-      postsThisMonth: 12,
-      engagement: 76,
-      avatar: "LI",
-      warning: "Token expires in 3 days"
-    },
-    {
-      id: "twitter-1",
-      type: "twitter",
-      name: "Your Twitter",
-      username: "@yourbusiness",
-      followers: 5600,
-      status: "disconnected",
-      lastSync: "Never",
-      postsThisMonth: 0,
-      engagement: 0,
-      avatar: "TW"
+  useEffect(() => {
+    fetchSocialAccounts();
+  }, []);
+
+  const fetchSocialAccounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('social_accounts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSocialAccounts(data || []);
+    } catch (error) {
+      console.error('Error fetching social accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load social accounts",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const connectedAccounts = socialAccounts.map(account => ({
+    id: account.id,
+    type: account.platform,
+    name: account.account_name,
+    username: account.account_id,
+    followers: 0, // This would come from actual API data
+    status: account.is_active ? "connected" : "disconnected",
+    lastSync: account.last_sync_at ? new Date(account.last_sync_at).toLocaleDateString() : "Never",
+    postsThisMonth: 0, // This would be calculated from posts
+    engagement: 0, // This would come from analytics
+    avatar: account.platform.substring(0, 2).toUpperCase(),
+    warning: account.last_error
+  }));
 
   const availablePlatforms = [
     {
@@ -195,6 +185,19 @@ const AccountsPage = () => {
     return count.toString();
   };
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading accounts...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -275,117 +278,125 @@ const AccountsPage = () => {
         </div>
 
         {/* Connected Accounts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {connectedAccounts.map((account) => {
-            const PlatformIcon = getPlatformIcon(account.type);
-            return (
-              <Card key={account.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white ${getPlatformColor(account.type)}`}>
-                        <PlatformIcon className="w-6 h-6" />
+        {connectedAccounts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {connectedAccounts.map((account) => {
+              const PlatformIcon = getPlatformIcon(account.type);
+              return (
+                <Card key={account.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white ${getPlatformColor(account.type)}`}>
+                          <PlatformIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{account.name}</CardTitle>
+                          <CardDescription>{account.username}</CardDescription>
+                        </div>
+                      </div>
+                      {getStatusBadge(account.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {account.warning && (
+                      <div className="p-3 bg-warning-muted border border-warning/20 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <AlertTriangle className="w-4 h-4 text-warning" />
+                          <span className="text-sm text-warning">{account.warning}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-lg font-semibold">{formatFollowers(account.followers)}</p>
+                        <p className="text-xs text-muted-foreground">Followers</p>
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{account.name}</CardTitle>
-                        <CardDescription>{account.username}</CardDescription>
+                        <p className="text-lg font-semibold">{account.postsThisMonth}</p>
+                        <p className="text-xs text-muted-foreground">Posts</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold">{account.engagement}%</p>
+                        <p className="text-xs text-muted-foreground">Engagement</p>
                       </div>
                     </div>
-                    {getStatusBadge(account.status)}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {account.warning && (
-                    <div className="p-3 bg-warning-muted border border-warning/20 rounded-lg">
+
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Last sync: {account.lastSync}</span>
                       <div className="flex items-center space-x-2">
-                        <AlertTriangle className="w-4 h-4 text-warning" />
-                        <span className="text-sm text-warning">{account.warning}</span>
+                        {account.status === "connected" && (
+                          <Button variant="outline" size="sm">
+                            <RefreshCw className="w-3 h-3 mr-1" />
+                            Sync
+                          </Button>
+                        )}
+                        {account.status === "warning" && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleReconnect(account.id, account.name)}
+                            disabled={isConnecting === account.id}
+                          >
+                            <RefreshCw className={`w-3 h-3 mr-1 ${isConnecting === account.id ? 'animate-spin' : ''}`} />
+                            {isConnecting === account.id ? 'Reconnecting...' : 'Reconnect'}
+                          </Button>
+                        )}
+                        {account.status === "disconnected" && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleReconnect(account.id, account.name)}
+                            disabled={isConnecting === account.id}
+                          >
+                            <RefreshCw className={`w-3 h-3 mr-1 ${isConnecting === account.id ? 'animate-spin' : ''}`} />
+                            {isConnecting === account.id ? 'Connecting...' : 'Connect'}
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  )}
 
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-lg font-semibold">{formatFollowers(account.followers)}</p>
-                      <p className="text-xs text-muted-foreground">Followers</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold">{account.postsThisMonth}</p>
-                      <p className="text-xs text-muted-foreground">Posts</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold">{account.engagement}%</p>
-                      <p className="text-xs text-muted-foreground">Engagement</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Engagement Rate</span>
-                      <span>{account.engagement}%</span>
-                    </div>
-                    <Progress value={account.engagement} className="h-2" />
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Last sync: {account.lastSync}</span>
-                    <div className="flex items-center space-x-2">
-                      {account.status === "connected" && (
-                        <Button variant="outline" size="sm">
-                          <RefreshCw className="w-3 h-3 mr-1" />
-                          Sync
-                        </Button>
-                      )}
-                      {account.status === "warning" && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleReconnect(account.id, account.name)}
-                          disabled={isConnecting === account.id}
-                        >
-                          <RefreshCw className={`w-3 h-3 mr-1 ${isConnecting === account.id ? 'animate-spin' : ''}`} />
-                          {isConnecting === account.id ? 'Reconnecting...' : 'Reconnect'}
-                        </Button>
-                      )}
-                      {account.status === "disconnected" && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleReconnect(account.id, account.name)}
-                          disabled={isConnecting === account.id}
-                        >
-                          <RefreshCw className={`w-3 h-3 mr-1 ${isConnecting === account.id ? 'animate-spin' : ''}`} />
-                          {isConnecting === account.id ? 'Connecting...' : 'Connect'}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <BarChart3 className="w-3 h-3 mr-1" />
-                      Analytics
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Settings className="w-3 h-3 mr-1" />
-                      Settings
-                    </Button>
-                    {account.status === "connected" && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleDisconnect(account.id, account.name)}
-                      >
-                        <X className="w-3 h-3" />
+                    <div className="flex items-center space-x-2 pt-2 border-t">
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <BarChart3 className="w-3 h-3 mr-1" />
+                        Analytics
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <Settings className="w-3 h-3 mr-1" />
+                        Settings
+                      </Button>
+                      {account.status === "connected" && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDisconnect(account.id, account.name)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No accounts connected</h3>
+              <p className="text-muted-foreground mb-4">
+                Connect your social media accounts to start managing your content.
+              </p>
+              <Button className="bg-gradient-brand hover:opacity-90">
+                <Plus className="w-4 h-4 mr-2" />
+                Connect Your First Account
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Available Platforms */}
         <Card>

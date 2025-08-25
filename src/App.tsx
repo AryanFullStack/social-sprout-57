@@ -13,6 +13,8 @@ import DashboardPage from "./pages/DashboardPage";
 import ComposerPage from "./pages/ComposerPage";
 import CalendarPage from "./pages/CalendarPage";
 import AccountsPage from "./pages/AccountsPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import PostsPage from "./pages/PostsPage";
 import SettingsPage from "./pages/SettingsPage";
 import HelpPage from "./pages/HelpPage";
 import NotFound from "./pages/NotFound";
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/composer" element={<ComposerPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/accounts" element={<AccountsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/posts" element={<PostsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/help" element={<HelpPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
