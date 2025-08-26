@@ -30,6 +30,30 @@ const AccountsPage = () => {
 
   useEffect(() => {
     fetchSocialAccounts();
+    
+    // Check for OAuth callback results
+    const urlParams = new URLSearchParams(window.location.search);
+    const connected = urlParams.get('connected');
+    const account = urlParams.get('account');
+    const error = urlParams.get('error');
+
+    if (connected && account) {
+      toast({
+        title: "Account connected!",
+        description: `Your ${connected} account (${account}) has been connected successfully.`,
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+      fetchSocialAccounts();
+    } else if (error) {
+      toast({
+        title: "Connection failed",
+        description: error,
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const fetchSocialAccounts = async () => {
@@ -101,22 +125,54 @@ const AccountsPage = () => {
   const handleConnect = async (platformId: string) => {
     setIsConnecting(platformId);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({
-      title: "Account connected!",
-      description: `Your ${platformId} account has been connected successfully.`,
-    });
-    
-    setIsConnecting(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('oauth-connect', {
+        body: { 
+          platform: platformId,
+          redirectUrl: window.location.href 
+        }
+      });
+
+      if (error) throw error;
+
+      // Redirect to OAuth provider
+      window.location.href = data.authUrl;
+      
+    } catch (error) {
+      console.error('Connection error:', error);
+      toast({
+        title: "Connection failed",
+        description: error.message || "Failed to initiate connection. Please try again.",
+        variant: "destructive",
+      });
+      setIsConnecting(null);
+    }
   };
 
-  const handleDisconnect = (accountId: string, platformName: string) => {
-    toast({
-      title: "Account disconnected",
-      description: `Your ${platformName} account has been disconnected.`,
-    });
+  const handleDisconnect = async (accountId: string, platformName: string) => {
+    try {
+      const { error } = await supabase
+        .from('social_accounts')
+        .delete()
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Account disconnected",
+        description: `Your ${platformName} account has been disconnected.`,
+      });
+
+      // Refresh the accounts list
+      fetchSocialAccounts();
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect account. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReconnect = async (accountId: string, platformName: string) => {

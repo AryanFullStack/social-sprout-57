@@ -105,6 +105,36 @@ export type Database = {
           },
         ]
       }
+      oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          provider: Database["public"]["Enums"]["platform"]
+          redirect_url: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          provider: Database["public"]["Enums"]["platform"]
+          redirect_url?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          provider?: Database["public"]["Enums"]["platform"]
+          redirect_url?: string | null
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           created_at: string
@@ -460,9 +490,12 @@ export type Database = {
           last_error: string | null
           last_sync_at: string | null
           organization_id: string
+          page_access_token: string | null
+          page_id: string | null
           platform: Database["public"]["Enums"]["social_platform"]
           refresh_token: string | null
           scope: string | null
+          token_expires_at: string | null
           updated_at: string
         }
         Insert: {
@@ -477,9 +510,12 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           organization_id: string
+          page_access_token?: string | null
+          page_id?: string | null
           platform: Database["public"]["Enums"]["social_platform"]
           refresh_token?: string | null
           scope?: string | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -494,9 +530,12 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           organization_id?: string
+          page_access_token?: string | null
+          page_id?: string | null
           platform?: Database["public"]["Enums"]["social_platform"]
           refresh_token?: string | null
           scope?: string | null
+          token_expires_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -616,6 +655,7 @@ export type Database = {
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected"
+      platform: "facebook" | "instagram" | "linkedin" | "twitter"
       post_status:
         | "draft"
         | "scheduled"
@@ -754,6 +794,7 @@ export const Constants = {
   public: {
     Enums: {
       approval_status: ["pending", "approved", "rejected"],
+      platform: ["facebook", "instagram", "linkedin", "twitter"],
       post_status: [
         "draft",
         "scheduled",
