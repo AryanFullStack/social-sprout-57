@@ -112,13 +112,6 @@ const AccountsPage = () => {
       icon: Linkedin, 
       description: "Connect your LinkedIn company pages",
       color: "linkedin"
-    },
-    {
-      id: "twitter",
-      name: "Twitter",
-      icon: Twitter,
-      description: "Connect your Twitter account",
-      color: "twitter"
     }
   ];
 

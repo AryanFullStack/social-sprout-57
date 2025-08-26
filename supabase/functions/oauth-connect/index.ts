@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface ConnectRequest {
-  platform: 'facebook' | 'instagram' | 'linkedin' | 'twitter';
+  platform: 'facebook' | 'instagram' | 'linkedin';
   redirectUrl?: string;
 }
 
@@ -86,34 +86,6 @@ Deno.serve(async (req) => {
           `redirect_uri=${encodeURIComponent(baseCallbackUrl)}/${platform}&` +
           `state=${state}&` +
           `scope=${encodeURIComponent(scope)}`;
-        break;
-      }
-      case 'twitter': {
-        // Twitter OAuth 2.0 with PKCE
-        const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
-        const encoder = new TextEncoder();
-        const data = encoder.encode(codeVerifier);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const codeChallenge = btoa(String.fromCharCode.apply(null, hashArray))
-          .replace(/\+/g, '-')
-          .replace(/\//g, '_')
-          .replace(/=/g, '');
-
-        // Store code verifier with state
-        await supabaseClient.from('oauth_states').update({
-          redirect_url: `${redirectUrl}?code_verifier=${codeVerifier}`
-        }).eq('state', state);
-
-        const scope = 'tweet.read,tweet.write,users.read,offline.access';
-        authUrl = `https://twitter.com/i/oauth2/authorize?` +
-          `response_type=code&` +
-          `client_id=${Deno.env.get('TWITTER_CLIENT_ID')}&` +
-          `redirect_uri=${encodeURIComponent(baseCallbackUrl)}/${platform}&` +
-          `scope=${encodeURIComponent(scope)}&` +
-          `state=${state}&` +
-          `code_challenge=${codeChallenge}&` +
-          `code_challenge_method=S256`;
         break;
       }
       default:

@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const platform = url.pathname.split('/').pop() as 'facebook' | 'instagram' | 'linkedin' | 'twitter';
+    const platform = url.pathname.split('/').pop() as 'facebook' | 'instagram' | 'linkedin';
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
@@ -139,46 +139,6 @@ Deno.serve(async (req) => {
         break;
       }
 
-      case 'twitter': {
-        // Get code verifier from state data
-        const codeVerifier = url.searchParams.get('code_verifier') || 
-          new URL(redirectUrl).searchParams.get('code_verifier');
-
-        if (!codeVerifier) {
-          throw new Error('Missing code verifier for Twitter OAuth');
-        }
-
-        const tokenResponse = await fetch('https://api.twitter.com/2/oauth2/token', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${Deno.env.get('TWITTER_CLIENT_ID')}:${Deno.env.get('TWITTER_CLIENT_SECRET')}`)}`,
-          },
-          body: new URLSearchParams({
-            grant_type: 'authorization_code',
-            code,
-            redirect_uri: `${baseCallbackUrl}/${platform}`,
-            code_verifier: codeVerifier,
-          }),
-        });
-
-        tokenData = await tokenResponse.json();
-        if (tokenData.error) {
-          throw new Error(`Twitter token exchange failed: ${tokenData.error_description}`);
-        }
-
-        // Get Twitter user info
-        const userResponse = await fetch('https://api.twitter.com/2/users/me', {
-          headers: { 'Authorization': `Bearer ${tokenData.access_token}` },
-        });
-        const userData = await userResponse.json();
-
-        accountInfo = {
-          account_id: userData.data.id,
-          account_name: userData.data.name,
-        };
-        break;
-      }
 
       default:
         throw new Error(`Unsupported platform: ${platform}`);
