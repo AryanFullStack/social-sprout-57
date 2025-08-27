@@ -492,7 +492,7 @@ export type Database = {
           organization_id: string
           page_access_token: string | null
           page_id: string | null
-          platform: Database["public"]["Enums"]["social_platform"]
+          platform: Database["public"]["Enums"]["platform"]
           refresh_token: string | null
           scope: string | null
           token_expires_at: string | null
@@ -512,7 +512,7 @@ export type Database = {
           organization_id: string
           page_access_token?: string | null
           page_id?: string | null
-          platform: Database["public"]["Enums"]["social_platform"]
+          platform: Database["public"]["Enums"]["platform"]
           refresh_token?: string | null
           scope?: string | null
           token_expires_at?: string | null
@@ -532,7 +532,7 @@ export type Database = {
           organization_id?: string
           page_access_token?: string | null
           page_id?: string | null
-          platform?: Database["public"]["Enums"]["social_platform"]
+          platform?: Database["public"]["Enums"]["platform"]
           refresh_token?: string | null
           scope?: string | null
           token_expires_at?: string | null
@@ -655,7 +655,7 @@ export type Database = {
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected"
-      platform: "facebook" | "instagram" | "linkedin" | "twitter"
+      platform: "facebook" | "instagram" | "linkedin"
       post_status:
         | "draft"
         | "scheduled"
@@ -794,7 +794,7 @@ export const Constants = {
   public: {
     Enums: {
       approval_status: ["pending", "approved", "rejected"],
-      platform: ["facebook", "instagram", "linkedin", "twitter"],
+      platform: ["facebook", "instagram", "linkedin"],
       post_status: [
         "draft",
         "scheduled",
