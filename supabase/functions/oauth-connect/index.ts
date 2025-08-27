@@ -25,23 +25,28 @@ Deno.serve(async (req) => {
     // Get auth token from request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      return new Response(JSON.stringify({ error: 'Authentication required. Please sign in first.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Set auth for the client
     const token = authHeader.replace('Bearer ', '');
-    await supabaseClient.auth.setSession({ access_token: token, refresh_token: '' });
-
-    const { data: userData } = await supabaseClient.auth.getUser();
-    if (!userData.user) {
-      throw new Error('Unauthorized');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid authentication. Please sign in again.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const { platform, redirectUrl = `${req.headers.get('origin')}/accounts` }: ConnectRequest = await req.json();
 
     // Generate secure state parameter
     const state = crypto.randomUUID();
-    const userId = userData.user.id;
+    const userId = user.id;
 
     // Store state in database for verification
     await supabaseClient.from('oauth_states').insert({

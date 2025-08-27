@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import {
   Facebook,
   Instagram,
   Linkedin,
-  Twitter,
   RefreshCw,
   Settings,
   BarChart3,
@@ -24,12 +24,34 @@ import { useToast } from "@/hooks/use-toast";
 
 const AccountsPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [socialAccounts, setSocialAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetchSocialAccounts();
+    // Check authentication status
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+      setUser(session.user);
+      fetchSocialAccounts();
+    };
+
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+      }
+    });
     
     // Check for OAuth callback results
     const urlParams = new URLSearchParams(window.location.search);
@@ -44,7 +66,7 @@ const AccountsPage = () => {
       });
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
-      fetchSocialAccounts();
+      setTimeout(() => fetchSocialAccounts(), 500);
     } else if (error) {
       toast({
         title: "Connection failed",
@@ -54,7 +76,9 @@ const AccountsPage = () => {
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const fetchSocialAccounts = async () => {
     try {
@@ -116,13 +140,31 @@ const AccountsPage = () => {
   ];
 
   const handleConnect = async (platformId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to connect social accounts.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
     setIsConnecting(platformId);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("No active session");
+      }
+
       const { data, error } = await supabase.functions.invoke('oauth-connect', {
         body: { 
           platform: platformId,
           redirectUrl: window.location.href 
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
 
@@ -234,13 +276,15 @@ const AccountsPage = () => {
     return count.toString();
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading accounts...</p>
+            <p className="mt-2 text-muted-foreground">
+              {!user ? "Checking authentication..." : "Loading accounts..."}
+            </p>
           </div>
         </div>
       </DashboardLayout>
