@@ -18,6 +18,11 @@ Deno.serve(async (req) => {
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
 
+    console.log('OAuth Callback - Platform:', platform);
+    console.log('OAuth Callback - Code received:', !!code);
+    console.log('OAuth Callback - State:', state);
+    console.log('OAuth Callback - Request URL:', req.url);
+
     if (error) {
       console.error('OAuth error:', error);
       return new Response(`OAuth Error: ${error}`, { status: 400 });
@@ -70,7 +75,9 @@ Deno.serve(async (req) => {
         });
 
         tokenData = await tokenResponse.json();
+        console.log('Facebook token response:', { ...tokenData, access_token: tokenData.access_token ? '[REDACTED]' : undefined });
         if (tokenData.error) {
+          console.error('Facebook token error:', tokenData.error);
           throw new Error(`Token exchange failed: ${tokenData.error.message}`);
         }
 

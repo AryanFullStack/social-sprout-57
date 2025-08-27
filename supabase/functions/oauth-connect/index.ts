@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
 
     let authUrl: string;
     const baseCallbackUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/oauth-callback`;
+    
+    console.log('OAuth Connect - Platform:', platform);
+    console.log('OAuth Connect - User ID:', userId);
+    console.log('OAuth Connect - Callback URL:', baseCallbackUrl);
 
     switch (platform) {
       case 'facebook': {
