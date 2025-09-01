@@ -19,6 +19,8 @@ import {
   BarChart3,
   Calendar
 } from "lucide-react";
+import { LinkedInConnectionDialog } from "@/components/linkedin/LinkedInConnectionDialog";
+import { LinkedInAccountCard } from "@/components/linkedin/LinkedInAccountCard";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 
@@ -374,6 +376,27 @@ const AccountsPage = () => {
         {connectedAccounts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {connectedAccounts.map((account) => {
+              // Use LinkedIn-specific card for LinkedIn accounts
+              if (account.type === 'linkedin') {
+                const linkedInAccount = socialAccounts.find(acc => acc.id === account.id);
+                if (linkedInAccount) {
+                  return (
+                    <LinkedInAccountCard
+                      key={account.id}
+                      account={linkedInAccount}
+                      isReconnecting={isConnecting === account.id}
+                      onReconnect={handleReconnect}
+                      onDisconnect={handleDisconnect}
+                      onSync={(accountId) => {
+                        // Implement sync functionality
+                        console.log('Syncing LinkedIn account:', accountId);
+                      }}
+                    />
+                  );
+                }
+              }
+
+              // Default card for other platforms
               const PlatformIcon = getPlatformIcon(account.type);
               return (
                 <Card key={account.id} className="hover:shadow-md transition-shadow">
@@ -519,24 +542,49 @@ const AccountsPage = () => {
                     <p className="text-sm text-muted-foreground mb-4">
                       {platform.description}
                     </p>
-                    <Button 
-                      className="w-full" 
-                      variant="outline"
-                      onClick={() => handleConnect(platform.id)}
-                      disabled={isConnecting === platform.id}
-                    >
-                      {isConnecting === platform.id ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Connect
-                        </>
-                      )}
-                    </Button>
+                    {platform.id === 'linkedin' ? (
+                      <LinkedInConnectionDialog
+                        isConnecting={isConnecting === platform.id}
+                        onConnect={handleConnect}
+                      >
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          disabled={isConnecting === platform.id}
+                        >
+                          {isConnecting === platform.id ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Connect
+                            </>
+                          )}
+                        </Button>
+                      </LinkedInConnectionDialog>
+                    ) : (
+                      <Button 
+                        className="w-full" 
+                        variant="outline"
+                        onClick={() => handleConnect(platform.id)}
+                        disabled={isConnecting === platform.id}
+                      >
+                        {isConnecting === platform.id ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Connect
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 ))}
             </div>
